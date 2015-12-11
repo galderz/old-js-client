@@ -2,21 +2,9 @@
 
 var _ = require('underscore');
 var f = require('../lib/functional');
-var codec = require('../lib/codec');
+var c = require('../lib/codec');
 
 var t = require('./utils/testing'); // Testing dependency
-
-var singleExpiryDecode = f.actions([codec.decodeUByte(), codec.decodeVLong()], codec.allDecoded);
-var constantExpiryDecode = f.actions([codec.decodeUByte()], codec.allDecoded);
-
-function lifespan(unit) { return unit << 4 | 0x07; }
-function maxIdle(unit) { return 0x70 | unit; }
-
-function object(name) {
-  return function(value) {
-    return _.object([name], [value]);
-  }
-}
 
 describe('Protocols', function() {
   var p = t.protocol();
@@ -27,6 +15,15 @@ describe('Protocols', function() {
   it('can encode/decode max idle', function() {
     encodeDecodeUnits('maxIdle', maxIdle);
   });
+
+  function lifespan(unit) { return unit << 4 | 0x07; }
+  function maxIdle(unit) { return 0x70 | unit; }
+
+  function object(name) {
+    return function(value) {
+      return _.object([name], [value]);
+    }
+  }
 
   function encodeDecodeUnits(name, converter) {
     var exp = object(name);
@@ -42,14 +39,14 @@ describe('Protocols', function() {
   }
 
   function encodeDecodeSingleNumericExpiry(expiry, duration, unit) {
-    var encoder = f.actions(p.encodeExpiry(expiry), codec.bytesEncoded);
-    var bytebuf = t.assertEncode(t.newByteBuf(), encoder, t.vNumSize(duration) + 1);
-    expect(singleExpiryDecode({buf: bytebuf.buf, offset: 0})).toEqual([unit, duration]);
+    var actions = f.actions(f.cat(
+      p.encodeExpiry(expiry), [t.flip(t.vNumSize(duration) + 1), c.decodeUByte(), c.decodeVLong()]),
+      c.last(2));
+    expect(actions(t.newByteBuf2())).toEqual([unit, duration]);
   }
 
   function encodeDecodeSingleConstantExpiry(expiry, unit) {
-    var encoder = f.actions(p.encodeExpiry(expiry), codec.bytesEncoded);
-    var bytebuf = t.assertEncode(t.newByteBuf(), encoder, 1);
-    expect(constantExpiryDecode({buf: bytebuf.buf, offset: 0})).toEqual([unit]);
+    var actions = f.actions(f.cat(p.encodeExpiry(expiry), [t.flip(1), c.decodeUByte()]), c.last());
+    expect(actions(t.newByteBuf2())).toEqual(unit);
   }
 });

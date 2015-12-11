@@ -3,10 +3,12 @@
 var f = require('../../lib/functional');
 var ispn = require('../../lib/infinispan');
 var protocols = require('../../lib/protocols');
+var utils = require('../../lib/utils');
+
 var log4js = require('log4js');
 
 exports.client = function() {
-  log4js.configure('spec/utils/test-log4js.json')
+  log4js.configure('spec/utils/test-log4js.json');
   return ispn.client(11222, '127.0.0.1', {version : '2.2'});
 };
 
@@ -87,8 +89,16 @@ exports.vNumSize = function(num) {
 }
 
 exports.newByteBuf = function() { return {buf: new Buffer(128), offset: 0}; };
-exports.assertEncode = function(bytebuf, encode, expectedBytes) {
-  expect(encode(bytebuf)).toBe(expectedBytes);
-  expect(bytebuf.buf.length).toBe(expectedBytes);
-  return bytebuf;
-};
+//exports.newByteBuf = function() { return utils.byteBuffer(128); };
+exports.newByteBuf2 = function() { return utils.byteBuffer(128); };
+//exports.assertEncode = function(bytebuf, encode, expectedBytes) {
+//  expect(encode(bytebuf)).toBe(expectedBytes);
+//  expect(bytebuf.buf.length).toBe(expectedBytes);
+//  return bytebuf;
+//};
+
+exports.flip = f.lift(function(bytebuf, length) {
+  var flipped = bytebuf.flip();
+  expect(flipped.length()).toBe(length);
+  return flipped;
+});
