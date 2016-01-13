@@ -95,11 +95,25 @@ describe('Infinispan local client', function() {
       .catch(failed(done))
       .finally(done);
   });
-  it('can put -> get -> remove a key/value pair on a named cache', function(done) { t.client("namedCache")
+  it('can put -> get -> remove a key/value pair on a named cache', function(done) {
+    t.client({ cacheName: 'namedCache'})
       .then(t.assert(t.put('key', 'value')))
       .then(t.assert(t.get('key'), t.toBe('value')))
       .then(t.assert(remove('key'), t.toBeTruthy))
-      .then(t.disconnect())
+      .then(t.disconnect()) // TODO: Should be in finally
+      .catch(failed(done))
+      .finally(done);
+  });
+  it('can put -> get -> remove a Protobuf encoded key/value pair', function(done) {
+    var pb = require('protobufjs');
+    var builder = pb.loadProtoFile('./spec/proto/cat.proto');
+    var Cat = builder.build('test').Cat;
+    var myCat = new Cat({ 'name': 'Garfield', 'age': 5 });
+    t.client({ protobuf: true })
+      .then(t.assert(t.put('key', myCat.encode())))
+      .then(t.assert(t.get('key'), toBeProto(myCat, Cat)))
+      .then(t.assert(remove('key'), t.toBeTruthy))
+      .then(t.disconnect()) // TODO: Should be in finally
       .catch(failed(done))
       .finally(done);
   });
@@ -189,4 +203,11 @@ function randomStr(size)  {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
 
   return text;
+}
+
+function toBeProto(value, type) {
+  return function(actual) {
+    var decoded = type.decode(actual);
+    expect(decoded).toEqual(value);
+  }
 }

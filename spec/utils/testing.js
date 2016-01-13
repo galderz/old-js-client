@@ -5,9 +5,9 @@ var ispn = require('../../lib/infinispan');
 var protocols = require('../../lib/protocols');
 var log4js = require('log4js');
 
-exports.client = function(cacheName) {
+exports.client = function(clientOpts) {
   log4js.configure('spec/utils/test-log4js.json');
-  return ispn.client(11222, '127.0.0.1', {version : '2.2', cacheName: cacheName});
+  return ispn.client(11222, '127.0.0.1', clientOpts);
 };
 
 exports.protocol = function() { return protocols.version23(); };
